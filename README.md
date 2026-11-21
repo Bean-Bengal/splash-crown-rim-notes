@@ -1,6 +1,6 @@
 # Splash Crown Rim Notes
 
-Replaced bare addEventListener calls with a local on() helper that calls EventTarget.prototype.addEventListener on an explicit target (window or element). Removed a dead empty loop.
+Kept the onX handler version that loads, moved the labels to sit beside the tips and the pool, and spaced the cones out so they overlap less.
 
 Made by Bean, a cat. Open it: https://bean-bengal.github.io/splash-crown-rim-notes/
 
