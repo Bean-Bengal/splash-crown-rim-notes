@@ -15,41 +15,51 @@ input[type=range]{flex:1;min-width:0}
 </style></head><body>
 <script data-bean-store>(function(){if(typeof location!=='undefined'&&location&&location.protocol==='about:'&&typeof document!=='undefined'&&document.addEventListener){document.addEventListener('click',function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href^="#"]');if(!a||a.target==='_blank')return;e.preventDefault();try{location.hash=a.getAttribute('href')}catch(x){}},true)}if(typeof window==='undefined')return;try{window.localStorage.getItem('x');return}catch(e){}var d=Object.assign({},window.__BEAN_SAVED||{});function post(){try{parent.postMessage({type:'bean-store',data:d},'*')}catch(e){}}var ls={getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v);post()},removeItem:function(k){delete d[k];post()},clear:function(){d={};post()},key:function(i){return Object.keys(d)[i]||null}};Object.defineProperty(ls,'length',{get:function(){return Object.keys(d).length}});try{Object.defineProperty(window,'localStorage',{value:ls,configurable:true})}catch(e){}})();</script><main>
 <h1>Splash crown: rim thickness</h1>
-<div id="banner"></div>
+<div id="banner">checking...</div>
 <div id="stage"><canvas id="c"></canvas>
-<div class="lab" contenteditable="true" style="left:4%;top:6%">rim</div>
-<div class="lab" contenteditable="true" style="left:4%;top:42%">thinnest point</div>
-<div class="lab" contenteditable="true" style="left:50%;top:75%">pool</div></div>
+<div class="lab" contenteditable="true" style="left:3%;top:12%">rim</div>
+<div class="lab" contenteditable="true" style="left:3%;top:30%">thinnest point (tip)</div>
+<div class="lab" contenteditable="true" style="left:60%;top:88%">pool</div></div>
 <label>Rim thickness <input id="t" type="range" min="1" max="20" value="8"><b id="tv">8</b></label>
 <div id="rd"></div>
 <script>
-function on(target,ev,fn){EventTarget.prototype.addEventListener.call(target,ev,fn);}
 // rule: rim thickness at height fraction h (0 base .. 1 tip); tapers to 35% at tip
 function rimAt(base,h){return base*(1-0.65*h);}
-function rimBad(base,h){return base*(1-0.65*h)+1;}
-function check(f){return f(10,0)===10&&Math.abs(f(10,1)-3.5)<1e-9&&Math.abs(f(20,0.5)-13.5)<1e-9;}
-const good=check(rimAt),twin=check(rimBad);
-const b=document.getElementById('banner');
-b.className=(good&&!twin)?'ok':'bad';
-b.textContent=(good&&!twin)?'Self-check passed (broken twin rejected)':'Self-check FAILED';
+// broken twins
+function twinPlus(base,h){return base*(1-0.65*h)+1;}
+function twinNoTaper(base,h){return base;}
+function twinHalf(base,h){return base*(1-0.65*Math.min(h,0.5));}
+function near(a,b){return Math.abs(a-b)<1e-9;}
+function check(f){
+ return near(f(10,0),10)&&near(f(10,1),3.5)&&near(f(20,0.5),13.5)&&
+  near(f(1,1),0.35)&&near(f(0,0.7),0)&&near(f(20,0.25),16.75);
+}
+const banner=document.getElementById('banner');
+try{
+ const good=check(rimAt);
+ const rejected=[twinPlus,twinNoTaper,twinHalf].map(f=>!check(f));
+ const all=good&&rejected.every(Boolean);
+ banner.className=all?'ok':'bad';
+ banner.textContent=all?'Self-check passed: rule correct, '+rejected.length+' broken copies rejected':'Self-check FAILED (rule '+good+', rejected '+rejected.join(',')+')';
+}catch(e){banner.className='bad';banner.textContent='Self-check crashed: '+e.message;}
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0;
 function size(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0);}
-size();on(window,'resize',size);
+size();window.onresize=size;
 const t=document.getElementById('t'),tv=document.getElementById('tv'),rd=document.getElementById('rd');
-on(t,'input',()=>{tv.textContent=t.value;});
+t.oninput=function(){tv.textContent=t.value;};
 let time=0,last=performance.now();
 function frame(now){
  const dt=Math.min(.05,(now-last)/1000);last=now;time+=dt;
  const ph=(time%3)/3, rise=Math.sin(Math.min(1,ph*1.6)*Math.PI/2)*(ph<.8?1:1-(ph-.8)/.2*.9);
  ctx.clearRect(0,0,W,H);
- const cx=W/2,cy=H*.7,R=W*.22,hgt=H*.3*rise;
- ctx.fillStyle='#dbeaf5';ctx.beginPath();ctx.ellipse(cx,cy,W*.4,H*.08,0,0,7);ctx.fill();
+ const cx=W/2,cy=H*.7,R=W*.3,hgt=H*.3*rise;
+ ctx.fillStyle='#dbeaf5';ctx.beginPath();ctx.ellipse(cx,cy,W*.4,H*.1,0,0,7);ctx.fill();
  ctx.fillStyle='#f3f8fc';ctx.strokeStyle='#333';ctx.lineWidth=2;
- const n=14,base=+t.value;
+ const n=9,base=+t.value;
  for(let i=0;i<n;i++){
-  const a=i/n*Math.PI*2,x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R*.3;
-  const hh=hgt*(1+.25*Math.sin(i*2.3));
+  const a=i/n*Math.PI*2+.3,x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R*.3;
+  const hh=hgt*(1+.2*Math.sin(i*2.3));
   const w=rimAt(base,1),w0=rimAt(base,0);
   ctx.beginPath();ctx.moveTo(x-w0,y);ctx.lineTo(x-w/2,y-hh);ctx.arc(x,y-hh,w/2,Math.PI,0);ctx.lineTo(x+w0,y);ctx.closePath();ctx.fill();ctx.stroke();
  }
@@ -59,10 +69,10 @@ function frame(now){
 requestAnimationFrame(frame);
 // drag labels
 let drag=null,ox=0,oy=0;
-document.querySelectorAll('.lab').forEach(l=>{
- on(l,'pointerdown',e=>{if(document.activeElement===l)return;drag=l;ox=e.clientX-l.offsetLeft;oy=e.clientY-l.offsetTop;e.preventDefault();});
- on(l,'dblclick',()=>l.focus());
+document.querySelectorAll('.lab').forEach(function(l){
+ l.onpointerdown=function(e){if(document.activeElement===l)return;drag=l;ox=e.clientX-l.offsetLeft;oy=e.clientY-l.offsetTop;e.preventDefault();};
+ l.ondblclick=function(){l.focus();};
 });
-on(window,'pointermove',e=>{if(!drag)return;drag.style.left=(e.clientX-ox)+'px';drag.style.top=(e.clientY-oy)+'px';});
-on(window,'pointerup',()=>{drag=null;});
+window.onpointermove=function(e){if(!drag)return;drag.style.left=(e.clientX-ox)+'px';drag.style.top=(e.clientY-oy)+'px';};
+window.onpointerup=function(){drag=null;};
 </script></main></body></html>
